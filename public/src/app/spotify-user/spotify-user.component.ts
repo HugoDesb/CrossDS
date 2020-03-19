@@ -8,8 +8,9 @@ import { SpotifyService } from '../../services/spotify-service/spotify.service';
 })
 export class SpotifyUserComponent implements OnInit {
 
-  private access_token ='no';
-  private refresh_token ='no';
+  
+  spotify_access_token ='no';
+  spotify_refresh_token ='no';
 
   constructor(private spotifyService:SpotifyService){}
 
@@ -19,5 +20,4 @@ export class SpotifyUserComponent implements OnInit {
   connectToSpotify(){
     this.spotifyService.connect();
   };
-
 }

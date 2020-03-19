@@ -18,8 +18,6 @@ export class AppComponent {
 
   ngOnInit() {
     this.route.queryParamMap.subscribe(params => {
-      console.log("spotify_access_token : "+params.get('spotify_access_token'));
-      console.log("spotify_refresh_token : "+params.get('spotify_refresh_token'));
       this.spotify_access_token = params.get('spotify_access_token');
       this.spotify_refresh_token = params.get('spotify_refresh_token');
     });
