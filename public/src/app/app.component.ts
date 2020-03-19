@@ -1,7 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnInit} from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 
-
-import {SpotifyService} from '../services/spotify-service/spotify.service';
 
 @Component({
   selector: 'app-root',
@@ -10,16 +9,23 @@ import {SpotifyService} from '../services/spotify-service/spotify.service';
 })
 export class AppComponent {
 
-  constructor(private spotifyService:SpotifyService){
+  private spotify_access_token = 'no';
+  private spotify_refresh_token = 'no';
+
+  constructor(private route: ActivatedRoute){
 
   }
 
-  title = 'crossDSN';
+  ngOnInit() {
+    this.route.queryParamMap.subscribe(params => {
+      console.log("spotify_access_token : "+params.get('spotify_access_token'));
+      console.log("spotify_refresh_token : "+params.get('spotify_refresh_token'));
+      this.spotify_access_token = params.get('spotify_access_token');
+      this.spotify_refresh_token = params.get('spotify_refresh_token');
+    });
+  }
 
   connectToDeezer(){
     console.log("Not Yet Implemented")
-  };
-  connectToSpotify(){
-    this.spotifyService.connect();
   };
 }

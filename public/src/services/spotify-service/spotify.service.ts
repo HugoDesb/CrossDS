@@ -13,7 +13,7 @@ export class SpotifyService {
   }
 
   public connect(){
-    this.http.get('http://localhost:8888/login/spotify').subscribe(data =>{
+    this.http.get('http://localhost:8888/spotify/login/').subscribe(data =>{
       console.log(data);
     });
   }
