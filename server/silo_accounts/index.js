@@ -1,13 +1,18 @@
 
+const Services = {
+    DEEZER : 'deezer',
+    SPOTIFY : 'spotify',
+};
+
 var express = require('express');
 var path = require('path');
-var uuidv4 = require("uuid/v4");
-var generator = require('generate-password');
+
 
 var bodyParser = require('body-parser');
+var mongoose = require('mongoose');
 
 var app = express();
-var port = 8090;
+
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
@@ -38,7 +43,7 @@ var uuidv4 = require("uuid/v4");
 
 
 
-mongoose.connect('mongodb://youmeoadmin:bla1bla1@ds161804.mlab.com:61804/youmeo-users', function (err) {
+mongoose.connect('mongodb://localhost:27017/crossDSN', function (err) {
     if(err){
         throw err;
     }else{
@@ -47,19 +52,23 @@ mongoose.connect('mongodb://youmeoadmin:bla1bla1@ds161804.mlab.com:61804/youmeo-
 });
 
 //declare schema USER
-var UserSchema = Schema({
-    user_id: String,
-    firstname: String,
-    lastname : String,
-    email : {type: String, unique:true},
-    password : String,
-    admin: Boolean,
-    active : Boolean,
+var AccountSchema = Schema({
+    account_id : {type: String, unique: true},
+    display_name: String,
+    username: String,
+    picture_url : String,
+    email : String,
+    service : {type :String, enum : [Services.SPOTIFY, Services.DEEZER]},
+    spotify_service : {
+        refresh_token : String,
+        access_token :String,
+        expire_date : Date //spotify access tokens expires in 1 hour (3600 sec)
+    }
 });
-
+AccountSchema.index({ email: 1, service: 1}, { unique: true });
 
 //Init model
-var UserModel = mongoose.model('users', UserSchema);
+var AccountModel = mongoose.model('accounts', AccountSchema);
 
 // IS ADMIN
 app.post('/silo/isAdmin', function(request, response){
@@ -117,27 +126,88 @@ app.post('/silo/changeValue', function(request, response){
     });
 });
 
+function getExpirationDate(expires_in){
+    return new Date((new Date()).getTime()+expires_in*1000);
+}
 
-module.exports = {
+module.exports = {    
     /**
-     * Renvoie si oui ou non l'utilisateur est admin
-     * @param {*} id 
+     * Connecte un compte spotify : 
+     *  - si le compte n'existe pas il est ajouté
+     *  - si il existe, le compte est mis à jour
+     * 
+     * Renvoie le compte (infos basiques)
+     * @param {*} refresh_token 
+     * @param {*} access_token 
+     * @param {*} expires_in 
+     * @param {*} display_name 
+     * @param {*} username 
+     * @param {*} picture_url
+     * @param {*} email 
      * @param {*} cb 
      */
-    isAdmin: function(id, cb){
-        UserModel.findOne({user_id:id}, 'admin', function(err,data){
-            if(err || data==null ){
-                cb(false);
-            }else{
-                cb(true);
+    createOrGetSpotifyAccount: function(
+        refresh_token, 
+        access_token,
+        expires_in, 
+        display_name, 
+        username, 
+        picture_url,
+        email,
+        cb)
+        {
+        
+            var query = {service: Services.SPOTIFY ,  email: email};
+            var account = {
+                account_id: uuidv4(),
+                display_name : display_name,
+                username: username,
+                picture_url : picture_url,
+                email : email, 
+                service : "spotify",
+                spotify_service: {
+                    refresh_token:refresh_token,
+                    access_token: access_token,
+                    expire_date : getExpirationDate(expires_in)
+                }
+            };
+
+        AccountModel.findOne(query, function(err,data){
+            console.log(data);
+            if(err){
+                console.log(err);
+                cb({sucess: false, data: err});
+            }else if(data == null){ // si pas dans la base : ajout
+                
+                var accountToAdd = new AccountModel(account);
+                accountToAdd.save(function (err, account){
+                    if(err){
+                        cb({success: false, data :err});
+                    }else{
+                        cb({success :true, data:account});
+                    }
+                });
+            }else{ // si dans la base 
+                cb({success :true, data:data});
+                /*
+                var accountToAdd = new AccountModel(account);
+                accountToAdd.save(function(err, account){
+                    if(err){
+                        cb({success: false, data :err});
+                    }else{
+                        cb({success :true, data:account});
+                    }
+                });
+                */
             }
         })
     },
 
-    /**
+/*     /**
      * Obtient la liste des utilisateurs 
      * @param {*} cb 
      */
+    /*
     getAllUsers: function(cb){
         UserModel.find({}, function(err, data){
             if(err){
@@ -150,12 +220,14 @@ module.exports = {
             }
         })  
     },
+    */
 
     /**
      * Ajoute le compte donné a la BDD, renvoie s'id si succès
      * @param {*} user 
      * @param {*} cb 
      */
+    /*
     addAccount: function(user, cb){
         var userToAdd = new UserModel({
             user_id : uuidv4(),
@@ -174,6 +246,7 @@ module.exports = {
             }
         });
     },
+    */
 
     /**
      * Met a jour le password donné pour l'email fourni
@@ -181,6 +254,7 @@ module.exports = {
      * @param {*} data 
      * @param {*} cb 
      */
+    /*
     updatePassword: function(data,cb){
         UserModel.findOneAndUpdate({email: data.email}, {password: data.password}, function(err, doc){
             if(err || doc == null){
@@ -193,12 +267,14 @@ module.exports = {
             }
         });
     },
+    */
 
     /**
      * Supprime le compte associé au user_id fouri
      * @param {*} user_id 
      * @param {*} cb 
      */
+    /*
     deleteAccount : function(user_id, cb){
         UserModel.deleteOne({user_id:user_id},function(err,res){
             if(err){
@@ -212,12 +288,14 @@ module.exports = {
             }
         });
     },
+    */
 
     /**
      * Obtient le user_id si le compte est vérifié
      * @param {*} data 
      * @param {*} cb 
      */
+    /*
     getUserId : function(data, cb){
         UserModel.findOne({email:data.email, password:data.password},'user_id active', function(err, res){
             if(err){
@@ -231,12 +309,14 @@ module.exports = {
             }
         });
     },
+    */
 
     /**
      * Renvoie un UserObject
      * @param {*} user_id 
      * @param {*} cb 
      */
+    /*
     getUserObject: function(user_id,cb){
         UserModel.find({user_id:user_id},'firstname lastname email active admin user_id', function(err, res){
            
@@ -255,6 +335,7 @@ module.exports = {
             }
         });
     },
+    */
 
     /**
      * Change la valeur du champ donné pour l'utilisateur précisé
@@ -263,6 +344,7 @@ module.exports = {
      * @param {*} value 
      * @param {*} cb 
      */
+    /*
     changeValue : function(user_id, field, value, cb){
         var update = {};
         update[field] = value;
@@ -279,12 +361,14 @@ module.exports = {
             }
         })
     }
+    */
 };
 
 
-////////////////
+/*
 console.log("Server started port " + port);
 if(process.env.PORT !== undefined){
     port= process.env.PORT;
 }
 app.listen(port);
+ */

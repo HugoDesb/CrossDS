@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 
 @Injectable({
   providedIn: 'root'
@@ -13,8 +13,17 @@ export class SpotifyService {
   }
 
   public connect(){
-    this.http.get('http://localhost:8888/spotify/login/').subscribe(data =>{
-      console.log(data);
+
+    this.http.get<SpotifyAuthURL>('http://localhost:4200/api/spotify/login/').subscribe(data =>{
+      if(data.success){
+        console.log(data.data);
+        window.location.href = data.data;
+      } 
     });
   }
+}
+
+export interface SpotifyAuthURL {
+  success: boolean;
+  data: string;
 }
