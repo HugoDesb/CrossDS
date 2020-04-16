@@ -13,7 +13,7 @@ var mongoose = require('mongoose');
 var credentials = {
     clientId: '8f6c8d03f6804e17b0757a1645854d4f',
     clientSecret: 'b1567c32522c434c8c25611c51ac9d8f',
-    redirectUri: serverAdress+':'+port+'/api/spotify/login/callback/'
+    redirectUri: "http://localhost:8888/api/spotify/login/callback/"
   };
 var scopes = ['user-read-private', 'user-read-email'];
 var spotifyApi = new SpotifyWebApi(credentials);
@@ -143,7 +143,7 @@ function getExpirationDate(expires_in){
     return new Date((new Date()).getTime()+expires_in*1000);
 }
 
-function updateSpotifyToken(access_token){
+function updateSpotifyToken(access_token, cb){
     AccountModel.findOne({service: Services.SPOTIFY ,  spotify_service: {access_token: access_token}}, function(err, data){
         if(err || data==null){
             console.log(err);
@@ -163,17 +163,15 @@ function updateSpotifyToken(access_token){
                         data.spotify_service.access_token = newData.body['access_token'];
                         data.markModified('spotify_service.expire_date');
                         data.save(function(ret){
-                            return newData.access_token;
+                            cb(newData.access_token);
                         })
-
-
                     },
                     function(err) {
                       console.log('Could not refresh access token', err);
                     }
                   );
             }else{
-
+                cb(access_token);
             }
         }
     })
@@ -185,7 +183,7 @@ module.exports = {
      *  - si le compte n'existe pas il est ajouté
      *  - si il existe, le compte est mis à jour
      * 
-     * Renvoie le compte (infos basiques)
+     * Renvoie l'access_token
      * @param {*} refresh_token 
      * @param {*} access_token 
      * @param {*} expires_in 
@@ -195,7 +193,7 @@ module.exports = {
      * @param {*} email 
      * @param {*} cb 
      */
-    createOrGetSpotifyAccount: function(
+    createSpotifyAccount: function(
         refresh_token, 
         access_token,
         expires_in, 
@@ -233,11 +231,11 @@ module.exports = {
                     if(err){
                         cb({success: false, data :err});
                     }else{
-                        cb({success :true, data:account});
+                        cb({success :true, access_token:account.spotify_service.access_token});
                     }
                 });
             }else{ // si dans la base 
-                cb({success :true, data:data});
+                cb({success :true, access_token:data.spotify_service.access_token});
                 /*
                 var accountToAdd = new AccountModel(account);
                 accountToAdd.save(function(err, account){
@@ -252,15 +250,11 @@ module.exports = {
         })
     },
 
-    getSpotifyAccount: function(){
-
-    }
-
     /**
      * Connecte un compte Deezer : 
      *  - si le compte n'existe pas il est ajouté
      *  - si il existe, le compte est mis à jour
-     * Renvoie le compte (infos basiques)
+     * Renvoie l'access_token'
      * @param {*} access_token 
      * @param {*} display_name 
      * @param {*} username 
@@ -268,7 +262,7 @@ module.exports = {
      * @param {*} email 
      * @param {*} cb 
      */
-    createOrGetDeezerAccount: function(
+    createDeezerAccount: function(
         access_token, 
         display_name, 
         username, 
@@ -301,11 +295,11 @@ module.exports = {
                     if(err){
                         cb({success: false, data :err});
                     }else{
-                        cb({success :true, data:account});
+                        cb({success :true, access_token:account.deezer_service.access_token});
                     }
                 });
             }else{ // si dans la base 
-                cb({success :true, data:data});
+                cb({success :true, access_token:data.deezer_service.access_token});
                 /*
                 var accountToAdd = new AccountModel(account);
                 accountToAdd.save(function(err, account){
@@ -320,173 +314,55 @@ module.exports = {
         })
     },
 
+    /**
+     * Get the user info for the spotify account associated with the access_token
+     * (automatically refresh token if necessary)
+     * @param {String} access_token 
+     * @param {Callback} cb 
+     */
+    getSpotifyAccountInfo: function(access_token, cb){
+        updateSpotifyToken(access_token, function(new_access_token){
+            AccountModel.findOne({spotify_service:{access_token: access_token}}, function(err, data){
+                if(err || data == null){
+                    console.log(err);
+                    cb({success: false, data: err});
+                }else{
+                    cb({success: true, 
+                        data: {
+                            display_name: data.display_name,
+                            username: data.username,
+                            picture_url: data.picture_url,
+                            email: data.email,
+                            access_token: data.spotify_service.access_token
+                        }})
+                }
+            });
+        });
+    },
+
+    /**
+     * Get the user info for the deezer account associated with the access_token
+     * @param {String} access_token 
+     * @param {Callback} cb 
+     */
+    getDeezerAccountInfo: function(access_token, cb){
+        AccountModel.findOne({deezer_service:{access_token: access_token}}, function(err, data){
+            if(err || data == null){
+                console.log(err);
+                cb({success: false, data: err});
+            }else{
+                cb({success: true, 
+                    data: {
+                        display_name: data.display_name,
+                        username: data.username,
+                        picture_url: data.picture_url,
+                        email: data.email,
+                        access_token: data.deezer_service.access_token
+                    }})
+            }
+        });
+    },
     
-/*     /**
-     * Obtient la liste des utilisateurs 
-     * @param {*} cb 
-     */
-    /*
-    getAllUsers: function(cb){
-        UserModel.find({}, function(err, data){
-            if(err){
-                throw err;
-            }else{
-                if(data == null){
-                    data = [];
-                }
-                cb({success:true, data:data});
-            }
-        })  
-    },
-    */
+    
 
-    /**
-     * Ajoute le compte donné a la BDD, renvoie s'id si succès
-     * @param {*} user 
-     * @param {*} cb 
-     */
-    /*
-    addAccount: function(user, cb){
-        var userToAdd = new UserModel({
-            user_id : uuidv4(),
-            lastname: user.lastname,
-            firstname:user.firstname,
-            email: user.email,
-            password:user.password,
-            admin:false,
-            active:true
-        });
-        userToAdd.save(function(err){
-            if(err){
-                cb({success: false});
-            }else{
-                cb({success :true, user_id:userToAdd.user_id});
-            }
-        });
-    },
-    */
-
-    /**
-     * Met a jour le password donné pour l'email fourni
-     * Renvoie  le succès
-     * @param {*} data 
-     * @param {*} cb 
-     */
-    /*
-    updatePassword: function(data,cb){
-        UserModel.findOneAndUpdate({email: data.email}, {password: data.password}, function(err, doc){
-            if(err || doc == null){
-                if(err){
-                    throw err;
-                }
-                cb(false);
-            }else{
-                cb(true);
-            }
-        });
-    },
-    */
-
-    /**
-     * Supprime le compte associé au user_id fouri
-     * @param {*} user_id 
-     * @param {*} cb 
-     */
-    /*
-    deleteAccount : function(user_id, cb){
-        UserModel.deleteOne({user_id:user_id},function(err,res){
-            if(err){
-                throw err;
-            }else{
-                if(res.deleteCcount == 0){
-                    cb(false);
-                }else{
-                    cb(true);
-                }
-            }
-        });
-    },
-    */
-
-    /**
-     * Obtient le user_id si le compte est vérifié
-     * @param {*} data 
-     * @param {*} cb 
-     */
-    /*
-    getUserId : function(data, cb){
-        UserModel.findOne({email:data.email, password:data.password},'user_id active', function(err, res){
-            if(err){
-                throw err;
-            }else{
-                if(res == null){
-                    cb({success:false});
-                }else{
-                    cb({success:true, user_id:res.user_id, active:res.active});
-                }
-            }
-        });
-    },
-    */
-
-    /**
-     * Renvoie un UserObject
-     * @param {*} user_id 
-     * @param {*} cb 
-     */
-    /*
-    getUserObject: function(user_id,cb){
-        UserModel.find({user_id:user_id},'firstname lastname email active admin user_id', function(err, res){
-           
-            if(err){
-                throw err;
-                
-            }else{
-                if(res == null){
-                    cb({success:false});
-                }else{
-                    cb({
-                        success:true, 
-                        data: res
-                    });
-                }
-            }
-        });
-    },
-    */
-
-    /**
-     * Change la valeur du champ donné pour l'utilisateur précisé
-     * @param {*} user_id 
-     * @param {*} field 
-     * @param {*} value 
-     * @param {*} cb 
-     */
-    /*
-    changeValue : function(user_id, field, value, cb){
-        var update = {};
-        update[field] = value;
-
-        UserModel.updateOne({user_id : user_id}, {$set:update},function(err, doc){
-            if(err){
-                throw err;
-            }else{
-                if(doc.modifiedCount == 0){
-                    cb(false);
-                }else{
-                    cb(true);
-                }
-            }
-        })
-    }
-    */
-};
-
-
-/*
-console.log("Server started port " + port);
-if(process.env.PORT !== undefined){
-    port= process.env.PORT;
 }
-app.listen(port);
- */

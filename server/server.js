@@ -109,7 +109,7 @@ app.get('/api/spotify/user/info', function(req, res){
  * GET 
  * Callback for authentication
  * Request access and refresh token
- * Returns to client home with both key
+ * Returns to client home with access key (refresh is stored in database)
  */
 app.get('/api/spotify/login/callback', function(req, res) {
 
@@ -142,7 +142,7 @@ app.get('/api/spotify/login/callback', function(req, res) {
 
         spotifyApi.getMe().then(
           function(me){
-            accountLayer.createOrGetSpotifyAccount(
+            accountLayer.createSpotifyAccount(
                 data.body.refresh_token, 
                 data.body.access_token, 
                 data.body.expires_in, 
@@ -153,12 +153,6 @@ app.get('/api/spotify/login/callback', function(req, res) {
                 function(ret){
                   res.redirect('http://localhost:4200/spotify/callback?' + 
                     querystring.stringify({
-                      service : ret.data.service,
-                      email : ret.data.email,
-                      picture_url : ret.data.picture_url,
-                      username: ret.data.username,
-                      display_name: ret.data.display_name,
-                      account_id : ret.data.account_id,
                       access_token : ret.data.spotify_service.access_token
                     })
                   );
