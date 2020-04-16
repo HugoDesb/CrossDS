@@ -88,16 +88,22 @@ app.get('/api/spotify/login', function(req, res) {
 /**
  * GET
  * Connect via OAuth2.0 to Deezer
- * Redirect to /callback/spotify
+ * Redirect to -----
  */
-app.get('/api/spotify/login', function(req, res) {
-  var authorizeURL = "https://connect.deezer.com/oauth/auth.php"+querystring.stringify({
+app.get('/api/deezer/login', function(req, res) {
+  var authorizeURL = "https://connect.deezer.com/oauth/auth.php?"+querystring.stringify({
     app_id : 	407522,
     redirect_uri : "http://localhost:8888/api/deezer/login/callback",
-    perms : "basic_access,email"
-  })
+    perms : "basic_access,email,offline_access"
+  });
   res.send({success: true, data: authorizeURL});
+  //res.redirect(authorizeURL);
 });
+
+app.get('/api/spotify/user/info', function(req, res){
+
+});
+
 
 /**
  * GET 
@@ -118,12 +124,12 @@ app.get('/api/spotify/login/callback', function(req, res) {
       res.send({
           error:'state_mismatch'
       });
-      
+
+  }else if (req.query.error){
     res.redirect('http://localhost:4200/?' +
       querystring.stringify({
-        error: "Can't connect to Spotify :/"
+        spotify_error: "Can't connect to Spotify :/"
       }));
-      
   } else {
     res.clearCookie(stateKey);
 
@@ -145,7 +151,7 @@ app.get('/api/spotify/login/callback', function(req, res) {
                 me.body.images[0].url,
                 me.body.email, 
                 function(ret){
-                  res.redirect('http://localhost:4200/?' + 
+                  res.redirect('http://localhost:4200/spotify/callback?' + 
                     querystring.stringify({
                       service : ret.data.service,
                       email : ret.data.email,
@@ -164,6 +170,64 @@ app.get('/api/spotify/login/callback', function(req, res) {
         console.log('Something went wrong!', err);
       }
     );
+  }
+});
+
+
+
+app.get('/api/deezer/login/callback', function(req, res) {
+  // http://redirect_uri?error_reason=user_denied
+  if(req.query.error_reason=="user_denied"){
+    res.redirect("http://localhost:4200/spotify/callback?"+querystring.stringify({
+      deezer_error: "Can't connect to Deezer :/"
+    }));
+  }else{
+    var code = req.query.code;
+
+    var accessTokenURL = 'https://connect.deezer.com/oauth/access_token.php?'+querystring.stringify({
+      app_id : 407522,
+      secret : 	"d482da32d0e5f1360bfa87e3ebb810a8", 
+      code: code,
+      output: "json"
+    });
+    request(accessTokenURL, { json: true }, (err1, res1, body1) => {
+      if (err1) { 
+        return console.log(err1); 
+      }else{
+        // get user info and set tok
+        var userInfoURL = "https://api.deezer.com/user/me?"+querystring.stringify({access_token:res1.body.access_token});
+        request(userInfoURL, { json: true }, (err2, res2, body2) => {
+            if(err2){
+              console.log(err2);
+            }else{
+              accountLayer.createOrGetDeezerAccount(res1.body.access_token, res2.body.name, res2.body.id, res2.body.picture_medium, res2.body.email , function(ret){
+                var hop = {
+                  service : ret.data.service,
+                  email : ret.data.email,
+                  picture_url : ret.data.picture_url,
+                  username: ret.data.username,
+                  display_name: ret.data.display_name,
+                  account_id : ret.data.account_id,
+                  access_token : ret.data.deezer_service.access_token
+                }
+                console.log(hop);
+                res.redirect('http://localhost:4200/deezer/callback?' + 
+                    querystring.stringify({
+                      service : ret.data.service,
+                      email : ret.data.email,
+                      picture_url : ret.data.picture_url,
+                      username: ret.data.username,
+                      display_name: ret.data.display_name,
+                      account_id : ret.data.account_id,
+                      access_token : ret.data.deezer_service.access_token
+                    })
+                  );
+              });
+            }
+        });
+      }
+      
+    });
   }
 });
 

@@ -6,12 +6,22 @@ const Services = {
 
 var express = require('express');
 var path = require('path');
-
-
+var SpotifyWebApi = require('spotify-web-api-node');
 var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 
+var credentials = {
+    clientId: '8f6c8d03f6804e17b0757a1645854d4f',
+    clientSecret: 'b1567c32522c434c8c25611c51ac9d8f',
+    redirectUri: serverAdress+':'+port+'/api/spotify/login/callback/'
+  };
+var scopes = ['user-read-private', 'user-read-email'];
+var spotifyApi = new SpotifyWebApi(credentials);
+
 var app = express();
+
+
+
 
 
 app.use(bodyParser.json());
@@ -63,6 +73,9 @@ var AccountSchema = Schema({
         refresh_token : String,
         access_token :String,
         expire_date : Date //spotify access tokens expires in 1 hour (3600 sec)
+    },
+    deezer_service : {
+        access_token : String,
     }
 });
 AccountSchema.index({ email: 1, service: 1}, { unique: true });
@@ -130,6 +143,42 @@ function getExpirationDate(expires_in){
     return new Date((new Date()).getTime()+expires_in*1000);
 }
 
+function updateSpotifyToken(access_token){
+    AccountModel.findOne({service: Services.SPOTIFY ,  spotify_service: {access_token: access_token}}, function(err, data){
+        if(err || data==null){
+            console.log(err);
+        }else{
+            var dateNow = new Date();
+            if(dateNow>data.spotify_service.expire_date){
+                spotifyApi.setRefreshToken(data.spotify_service.refresh_token);
+                spotifyApi.refreshAccessToken().then(
+                    function(newData) {
+                        console.log('The access token has been refreshed!');
+                  
+                        // Save the access token so that it's used in future calls
+                        spotifyApi.setAccessToken(newData.body['access_token']);
+
+                        //Modify expire date and 
+                        data.spotify_service.expire_date.setMilliseconds(getExpirationDate(3600));
+                        data.spotify_service.access_token = newData.body['access_token'];
+                        data.markModified('spotify_service.expire_date');
+                        data.save(function(ret){
+                            return newData.access_token;
+                        })
+
+
+                    },
+                    function(err) {
+                      console.log('Could not refresh access token', err);
+                    }
+                  );
+            }else{
+
+            }
+        }
+    })
+}
+
 module.exports = {    
     /**
      * Connecte un compte spotify : 
@@ -164,7 +213,7 @@ module.exports = {
                 username: username,
                 picture_url : picture_url,
                 email : email, 
-                service : "spotify",
+                service : Services.SPOTIFY,
                 spotify_service: {
                     refresh_token:refresh_token,
                     access_token: access_token,
@@ -203,6 +252,75 @@ module.exports = {
         })
     },
 
+    getSpotifyAccount: function(){
+
+    }
+
+    /**
+     * Connecte un compte Deezer : 
+     *  - si le compte n'existe pas il est ajouté
+     *  - si il existe, le compte est mis à jour
+     * Renvoie le compte (infos basiques)
+     * @param {*} access_token 
+     * @param {*} display_name 
+     * @param {*} username 
+     * @param {*} picture_url 
+     * @param {*} email 
+     * @param {*} cb 
+     */
+    createOrGetDeezerAccount: function(
+        access_token, 
+        display_name, 
+        username, 
+        picture_url,
+        email,
+        cb)
+        {
+        
+            var query = {service: Services.DEEZER ,  email: email};
+            var account = {
+                account_id: uuidv4(),
+                display_name : display_name,
+                username: username,
+                picture_url : picture_url,
+                email : email, 
+                service : Services.DEEZER,
+                deezer_service: {
+                    access_token: access_token,
+                }
+            };
+
+        AccountModel.findOne(query, function(err,data){
+            if(err){
+                console.log(err);
+                cb({sucess: false, data: err});
+            }else if(data == null){ // si pas dans la base : ajout
+                
+                var accountToAdd = new AccountModel(account);
+                accountToAdd.save(function (err, account){
+                    if(err){
+                        cb({success: false, data :err});
+                    }else{
+                        cb({success :true, data:account});
+                    }
+                });
+            }else{ // si dans la base 
+                cb({success :true, data:data});
+                /*
+                var accountToAdd = new AccountModel(account);
+                accountToAdd.save(function(err, account){
+                    if(err){
+                        cb({success: false, data :err});
+                    }else{
+                        cb({success :true, data:account});
+                    }
+                });
+                */
+            }
+        })
+    },
+
+    
 /*     /**
      * Obtient la liste des utilisateurs 
      * @param {*} cb 
