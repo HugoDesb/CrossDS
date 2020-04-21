@@ -1,8 +1,15 @@
 <app-top-bar></app-top-bar>
 
-<div>
-  <button (click)="connectToDeezer()">Connect to Deezer</button>
+<div class="main">
+    <div class="apps">
+        <app-deezer-user class="app"></app-deezer-user>
+        <app-spotify-user class="app"></app-spotify-user>
+    </div>
+    <div class="create">
+        <input #playlistName type="text" placeholder="Entrez le nom de la playlist">
+        <button (click)="create(playlistName.value)">Créer</button> 
+    </div>
+
 </div>
 
-<app-spotify-user></app-spotify-user>
 

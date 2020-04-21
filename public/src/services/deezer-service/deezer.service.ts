@@ -7,14 +7,14 @@ import { Account } from "../../app/account";
 @Injectable({
   providedIn: 'root'
 })
-export class SpotifyService {
+export class DeezerService {
 
   service: string;
 
   constructor(private http:HttpClient) {
-    this.service = "spotify";
-  }
-  
+    this.service = "deezer";
+   }
+
   public connect(): void{
     this.http.get<OAuthURL>('http://localhost:4200/api/login/'+this.service).subscribe(data =>{
       if(data.success){
@@ -28,8 +28,8 @@ export class SpotifyService {
   public getUserInfos(account_id: string): Observable<UserInfo>{
     return this.http.get<UserInfo>('http://localhost:4200/api/user/'+account_id);
   }
-}
 
+}
 export interface UserInfo {
   success: boolean,
   data : Account

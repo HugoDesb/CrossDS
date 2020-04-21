@@ -1,0 +1,16 @@
+{
+  "name": "pilote_deezer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "query-string": "^6.12.1",
+    "querystring": "^0.2.0",
+    "request": "^2.88.2"
+  }
+}

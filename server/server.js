@@ -7,41 +7,34 @@
  * For more information, read
  * https://developer.spotify.com/web-api/authorization-guide/#authorization_code_flow
  */
-const port = 8888;
-const serverAdress = "http://localhost"
 
-
+const Configuration = require('../configuration.json');
 var express = require('express'); // Express web server framework
-var request = require('request'); // "Request" library
 var cors = require('cors');
 var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
+var accountLayer = require('./pilote/accounts/index.js');
+const bodyParser = require("body-parser");
 
-var client_id = '8f6c8d03f6804e17b0757a1645854d4f'; // Your client id
-var client_secret = 'b1567c32522c434c8c25611c51ac9d8f'; // Your secret
-var redirect_uri = serverAdress+':'+port+'/spotify/login/callback/'; // Your redirect uri
+const port = Configuration.server.port;
+const serverAdress = Configuration.server.base_address;
 
-/**
- * Generates a random string containing numbers and letters
- * @param  {number} length The length of the string
- * @return {string} The generated string
- */
-var generateRandomString = function(length) {
-  var text = '';
-  var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
-  for (var i = 0; i < length; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
-};
 
-var stateKey = 'spotify_auth_state';
+// The code that's returned as a query parameter to the redirect URI
+//var code = generateRandomString(16);
+
+
+
 
 var app = express();
 
 app.use(express.static(__dirname + '../crossDSN/'))
    .use(cors())
+   .use(bodyParser.urlencoded({
+    extended: true
+   }))
+   .use(bodyParser.json())
    .use(cookieParser());
 
 app.use(function(req, res, next){
@@ -59,143 +52,87 @@ app.use(function(req, res, next){
 
 /**
  * GET
- * Connect via OAuth2.0 to spotify
- * Redirect to /callback/spotify
+ * Get the OAuth url for the demanded sservice
+ * Redirect to /callback/:service
  */
-app.get('/spotify/login', function(req, res) {
-
-  var state = generateRandomString(16);
-  res.cookie(stateKey, state);
-
-  // your application requests authorization
-  var scope = 'user-read-private user-read-email';
-  res.redirect('https://accounts.spotify.com/authorize?' +
-    querystring.stringify({
-      response_type: 'code',
-      client_id: client_id,
-      scope: scope,
-      redirect_uri: redirect_uri,
-      state: state
-    }));
+app.get('/api/login/:service', function(req, res) {
+  var oAuthURL = accountLayer.getSpotifyOAuthURL(req.params.service);
+  if(oAuthURL == null){
+      res.send({
+          success: false, 
+          error: "Unknown service: "+req.params.service
+      });
+  }else{
+      res.send({
+          success: true, 
+          url: oAuthURL
+      });
+  }
 });
 
 /**
  * GET 
  * Callback for authentication
- * Request access and refresh token
- * Returns to client home with both key
+ * Returns to client home with account_id
  */
-app.get('/spotify/login/callback', function(req, res) {
+app.get('/api/callback/login/:service', function(req, res) {
 
-  // your application requests refresh and access tokens
-  // after checking the state parameter
+    var code = req.query.code || null;
+    var service = req.params.service || null;
 
-  var code = req.query.code || null;
-  var state = req.query.state || null;
-  var storedState = req.cookies ? req.cookies[stateKey] : null;
+    var redirectUrl = Configuration.public.base_address+":"+Configuration.public.port;
 
-  if (state === null || state !== storedState) {
-      res.send({
-          error:'state_mismatch'
-      });
-      
-    res.redirect('http://localhost:4200/?' +
-      querystring.stringify({
-        spotify_error: 'state_mismatch'
-      }));
-      
-  } else {
-    res.clearCookie(stateKey);
-    var authOptions = {
-      url: 'https://accounts.spotify.com/api/token',
-      form: {
-        code: code,
-        redirect_uri: redirect_uri,
-        grant_type: 'authorization_code'
-      },
-      headers: {
-        'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64'))
-      },
-      json: true
-    };
-
-    request.post(authOptions, function(error, response, body) {
-      if (!error && response.statusCode === 200) {
-
-        var access_token = body.access_token,
-            refresh_token = body.refresh_token;
-
-        var options = {
-          url: 'https://api.spotify.com/v1/me',
-          headers: { 'Authorization': 'Bearer ' + access_token },
-          json: true
-        };
-
-        // use the access token to access the Spotify Web API
-        request.get(options, function(error, response, body) {
-            console.log(body);
-            
-            /*
-            res.send({
-                display_name:body.display_name,
-                access_token: access_token,
-                refresh_token : refresh_token
-            });
-            */
+    if(code==null || service==null){
+        res.redirect(redirectUrl + querystring.stringify({
+            success: false,
+            error: "Missing parameters"
+            })
+        );
+    }else if (req.query.error){
+        res.redirect(redirectUrl + querystring.stringify({
+            success: false,
+            error: "Can't connect to "+service+" :/"
+            })
+        );
+    } else {
+        accountLayer.createAndGetAccountId(code, service, function(retour){
+            res.clearCookie("account_id_"+service);
+            if(retour.success){
+                res.cookie("account_id_"+service, retour.data.account_id);
+                res.redirect(redirectUrl);
+            }else{
+                res.redirect(redirectUrl+querystring.stringify(retour));
+            }
         });
+    }
+});
 
-        // we can also pass the token to the browser to make requests from there
-        
-        
-        res.redirect('http://localhost:4200/?' +
-          querystring.stringify({
-            spotify_access_token: access_token,
-            spotify_refresh_token: refresh_token
-          }));
-          
-      } else {
-          res.send({
-              error: 'invalid token'
-          });
-          
-        res.redirect('http://localhost:4200/?' +
-          querystring.stringify({
-            spotify_error: 'invalid_token'
-          }));
-          
-      }
+
+
+
+app.get('/api/user/:account_id', function(req, res){
+  console.log(req.body)
+  if(req.params.account_id == null){
+    res.send({
+      success : false, 
+      error: "The account_id is missing"
+    });
+  }else{
+    accountLayer.getUserInfos(req.params.account_id, function(data){
+        res.send(data);
     });
   }
 });
 
-/** 
- * GET 
- * Refresh the access token for the spotify user
- * Given the refresh token
+/**
+ * Create the playlist
  */
-app.get('/spotify/refresh_token', function(req, res) {
-
-  // requesting access token from refresh token
-  var refresh_token = req.query.refresh_token;
-  var authOptions = {
-    url: 'https://accounts.spotify.com/api/token',
-    headers: { 'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64')) },
-    form: {
-      grant_type: 'refresh_token',
-      refresh_token: refresh_token
-    },
-    json: true
-  };
-
-  request.post(authOptions, function(error, response, body) {
-    if (!error && response.statusCode === 200) {
-      var access_token = body.access_token;
-      res.send({
-        spotify_access_token: access_token
-      });
-    }
-  });
+app.post('/api/playlist/:name', function(req, ret){
+  
 });
+
+
+
 
 console.log('Listening on '+port);
 app.listen(port);

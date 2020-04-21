@@ -1,10 +1,9 @@
-
 <div *ngIf="!connected">
-    <button (click)="connect()">Connect to Spotify</button>
+    <button (click)="connect()">Connect to Deezer</button>
 </div>
 
 <div class="userInfo" *ngIf="connected">
-    Spotify : 
+    Deezer : 
     <span>{{account.display_name}}</span>
     <span>{{account.username}}</span>
     <span>{{account.email}}</span>
