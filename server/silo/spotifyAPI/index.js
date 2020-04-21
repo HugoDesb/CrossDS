@@ -3,7 +3,7 @@ var SpotifyWebApi = require('spotify-web-api-node');
 var credentials = {
     clientId: '8f6c8d03f6804e17b0757a1645854d4f',
     clientSecret: 'b1567c32522c434c8c25611c51ac9d8f',
-    redirectUri: "http://localhost:8888/api/spotify/login/callback/"
+    redirectUri: "http://localhost:8888/api/callback/login/spotify"
   };
 var spotifyApi = new SpotifyWebApi(credentials);
 
@@ -55,8 +55,7 @@ module.exports = {
      * Obtain the OAtuthURL to login
      */
     getOAuthURL(){
-        var state = generateRandomString(16);
-        var authorizeURL = spotifyApi.createAuthorizeURL(scopes, state);
+        var authorizeURL = spotifyApi.createAuthorizeURL(scopes);
         return authorizeURL;
     }, 
 
@@ -72,15 +71,16 @@ module.exports = {
                     success: false,
                     error: data.body.error
                 });
+            }else{
+                callback({
+                    success: true,
+                    tokens: {
+                        access_token : data.body['access_token'],
+                        refresh_token: data.body['refresh_token'],
+                        expire_date: getExpirationDate(data.body['expires_in'])
+                    }
+                });
             }
-            callback({
-                success: true,
-                tokens: {
-                    access_token : data.body['access_token'],
-                    refresh_token: data.body['refresh_token'],
-                    expire_date: getExpirationDate(data.body['expires_in'])
-                }
-            });
         }, function(err){
             console.log('Error');
             throw err;
@@ -252,6 +252,7 @@ module.exports = {
 
             spotifyApi.addTracksToPlaylist(playlist_id, tracks_uri).then(function(data) {
                 if(data.body.error){
+                    // if API responds with an error
                     callback({
                         success: false, 
                         tokens:tok,

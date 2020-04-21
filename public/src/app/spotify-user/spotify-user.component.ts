@@ -16,10 +16,10 @@ export class SpotifyUserComponent implements OnInit {
   constructor(@Inject(DOCUMENT) private document: Document, private spotifyService:SpotifyService){}
 
   ngOnInit(): void {
-    if (this.getCookie("spotify_access_token") != "") {
+    if (this.getCookie("account_id_spotify") != "") {
       console.log('The cookie "reader" exists (ES6)')
       //get Infos
-      this.spotifyService.getUserInfos(this.getCookie("spotify_access_token"))
+      this.spotifyService.getUserInfos(this.getCookie("account_id_spotify"))
         .subscribe(ret => {
           this.account= ret.data;
           this.connected = true;

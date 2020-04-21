@@ -19,10 +19,10 @@ export class DeezerUserComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    if (this.getCookie("deezer_access_token") != "") {
+    if (this.getCookie("account_id_deezer") != "") {
       console.log('The cookie "reader" exists (ES6)')
       //get Infos
-      this.deezerService.getUserInfos(this.getCookie("deezer_access_token"))
+      this.deezerService.getUserInfos(this.getCookie("account_id_deezer"))
         .subscribe(ret => {
           this.account= ret.data;
           this.connected = true;

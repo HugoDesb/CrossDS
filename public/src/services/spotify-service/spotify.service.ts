@@ -16,17 +16,17 @@ export class SpotifyService {
   }
   
   public connect(): void{
-    this.http.get<OAuthURL>('http://localhost:4200/api/'+this.service+'/login/').subscribe(data =>{
+    this.http.get<OAuthURL>('http://localhost:4200/api/login/'+this.service).subscribe(data =>{
       if(data.success){
-        window.location.href = data.data;
+        window.location.href = data.url;
       } else{
-        console.log("Can't get OAuth URL for service:"+this.service+" at "+'http://localhost:4200/api/'+this.service+'/login/');
+        console.log("Can't get OAuth URL for service:"+this.service+" at "+'http://localhost:4200/api/login/'+this.service);
       }
     });
   };
 
-  public getUserInfos(access_token: string): Observable<UserInfo>{
-    return this.http.post<UserInfo>('http://localhost:4200/api/user/info', {access_token: access_token, service:this.service});
+  public getUserInfos(account_id: string): Observable<UserInfo>{
+    return this.http.get<UserInfo>('http://localhost:4200/api/user/'+account_id);
   }
 }
 
@@ -37,5 +37,5 @@ export interface UserInfo {
 
 export interface OAuthURL {
   success: boolean;
-  data: string;
+  url: string;
 }

@@ -1,11 +1,11 @@
 
 var request = require('request')
-var request = require('querystring');
+var querystring = require('querystring');
 
 var credentials = {
     app_id: '8f6c8d03f6804e17b0757a1645854d4f',
     secret: 'b1567c32522c434c8c25611c51ac9d8f',
-    redirectUrl: "http://localhost:8888/api/spotify/login/callback/"
+    redirectUrl: "http://localhost:8888/api/callback/login/deezer"
 };
 
 var scopes = 'basic_access,email,offline_access,manage_library';
@@ -53,10 +53,9 @@ module.exports = {
                     });
                 }else{
                     callback({
-                        success: false,
-                        data: {
-                            access_token: data.access_token
-                        }
+                        success: false, 
+                        access_token: data.access_token
+
                     });
                 }
                 
@@ -80,7 +79,10 @@ module.exports = {
                 throw err;
             }else{
                 if(data.error){
-                    v
+                    callback({
+                        success: false, 
+                        error: data.error
+                    })
                 }else{
                     callback({
                         success: true,
