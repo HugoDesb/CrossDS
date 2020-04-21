@@ -7,7 +7,7 @@ var credentials = {
   };
 var spotifyApi = new SpotifyWebApi(credentials);
 
-var scopes = ['user-read-private', 'user-read-email', 'playlist-modify-public', 'playlist-modify-private',  'playlist-read-public', 'playlist-read-private'];
+var scopes = ['user-read-private', 'user-read-email', 'playlist-modify-public', 'playlist-modify-private',  'playlist-read-collaborative', 'playlist-read-private'];
 
 /**
  * Update IF necessary the access_token
@@ -82,7 +82,7 @@ module.exports = {
                 });
             }
         }, function(err){
-            console.log('Error');
+            console.log('Error2',err );
             throw err;
         });
     },

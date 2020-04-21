@@ -8,6 +8,7 @@ import { AppComponent } from './app.component';
 import { TopBarComponent } from './top-bar/top-bar.component';
 import { SpotifyUserComponent } from './spotify-user/spotify-user.component';
 import { DeezerUserComponent } from './deezer-user/deezer-user.component';
+import { AccountInfoComponent } from './account-info/account-info.component';
 
 @NgModule({
   declarations: [
@@ -15,6 +16,7 @@ import { DeezerUserComponent } from './deezer-user/deezer-user.component';
     TopBarComponent,
     SpotifyUserComponent,
     DeezerUserComponent,
+    AccountInfoComponent,
   ],
   imports: [
     BrowserModule,

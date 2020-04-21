@@ -6,4 +6,8 @@
 <div class="userInfo" *ngIf="connected">
     Spotify : 
     <span>{{account.display_name}}</span>
+    <span>{{account.username}}</span>
+    <span>{{account.email}}</span>
+    <span>{{account.service}}</span>
+    <img src="{{account.picture_url}}" width="100px" height="100px" style="border-radius: 50px;">
 </div>

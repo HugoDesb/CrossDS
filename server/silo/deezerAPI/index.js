@@ -3,8 +3,8 @@ var request = require('request')
 var querystring = require('querystring');
 
 var credentials = {
-    app_id: '8f6c8d03f6804e17b0757a1645854d4f',
-    secret: 'b1567c32522c434c8c25611c51ac9d8f',
+    app_id: '407522',
+    secret: 'd482da32d0e5f1360bfa87e3ebb810a8',
     redirectUrl: "http://localhost:8888/api/callback/login/deezer"
 };
 
@@ -53,7 +53,7 @@ module.exports = {
                     });
                 }else{
                     callback({
-                        success: false, 
+                        success: true, 
                         access_token: data.access_token
 
                     });
@@ -69,7 +69,7 @@ module.exports = {
      * @param {Callback} callback 
      */
     getUserInfos(access_token, callback){
-        var url = "https://api.deezer.com/user/me"+querystring.stringify({
+        var url = "https://api.deezer.com/user/me?"+querystring.stringify({
             access_token : access_token,
             output:'json'
         });
@@ -78,11 +78,13 @@ module.exports = {
                 console.log("Error"); 
                 throw err;
             }else{
+                console.log("URL: ",url);
+                console.log("rep : ",data);
                 if(data.error){
                     callback({
                         success: false, 
                         error: data.error
-                    })
+                    });
                 }else{
                     callback({
                         success: true,
@@ -105,7 +107,7 @@ module.exports = {
      * @param {Callback} callback 
      */
     createPlaylist(name, access_token, callback){
-        var url = "https://api.deezer.com/user/me"+querystring.stringify({
+        var url = "https://api.deezer.com/user/me?"+querystring.stringify({
             access_token : access_token,
             title: name,
             output:'json'

@@ -82,7 +82,13 @@ app.get('/api/callback/login/:service', function(req, res) {
 
     var redirectUrl = Configuration.public.base_address+":"+Configuration.public.port;
 
-    if (req.query.error){
+    if(code==null || service==null){
+        res.redirect(redirectUrl + querystring.stringify({
+            success: false,
+            error: "Missing parameters"
+            })
+        );
+    }else if (req.query.error){
         res.redirect(redirectUrl + querystring.stringify({
             success: false,
             error: "Can't connect to "+service+" :/"

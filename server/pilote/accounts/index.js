@@ -213,20 +213,21 @@ module.exports = {
                     }else{
                          var tokens = ret.tokens;
 
-                        AccountModel.find({service: service, spotify_service:{ refresh_token: tokens.refresh_token}}, function(err, doc){
+                        AccountModel.findOne({service: service, spotify_service:{ refresh_token: tokens.refresh_token}}, function(err, doc){
+                            console.log(doc);
                             if(err){
-                                console.log("Error");
+                                console.log("Error1");
                                 throw err;
-                            }else if(doc == null){
-                                createSpotifyAccount(tokens, function(data){
-                                    callback(data)
-                                });
-                            }else{
+                            }else if(doc){
                                 callback({
                                     success: true,
                                     data: {
                                         account_id: doc.account_id
                                     }
+                                });
+                            }else{
+                                createSpotifyAccount(tokens, function(data){
+                                    callback(data)
                                 });
                             }
                         });
@@ -243,20 +244,23 @@ module.exports = {
                     }else{
                         var token = ret.access_token;
 
-                        AccountModel.find({service: service, deezer_service:{access_token: token}}, function(err, doc){
+                        AccountModel.findOne({service: service, deezer_service:{access_token: token}}, function(err, doc){
+                            console.log(doc);
                             if(err){
                                 console.log("Error");
                                 throw err;
-                            }else if(doc == null){
-                                createDeezerAccount(token, function(data){
-                                    callback(data)
-                                });
-                            }else{
+                            }else if(doc){
+                                console.log("hep", doc.account_id);
                                 callback({
                                     success: true,
                                     data: {
                                         account_id: doc.account_id
                                     }
+                                });
+                            }else{
+                                createDeezerAccount(token, function(data){
+                                    console.log("hop", data)
+                                    callback(data)
                                 });
                             }
                         })
