@@ -6,7 +6,7 @@ var credentials = {
     app_id: '8f6c8d03f6804e17b0757a1645854d4f',
     secret: 'b1567c32522c434c8c25611c51ac9d8f',
     redirectUrl: "http://localhost:8888/api/spotify/login/callback/"
-  };
+};
 
 var scopes = 'basic_access,email,offline_access,manage_library';
 
@@ -49,9 +49,7 @@ module.exports = {
                 if(data.error){
                     callback({
                         success: false,
-                        data: {
-                            error: data.error
-                        }
+                        error: data.error
                     });
                 }else{
                     callback({
@@ -82,12 +80,7 @@ module.exports = {
                 throw err;
             }else{
                 if(data.error){
-                    callback({
-                        success: false,
-                        data: {
-                            error: data.error
-                        }
-                    });
+                    v
                 }else{
                     callback({
                         success: true,
@@ -123,9 +116,7 @@ module.exports = {
                 if(data.error){
                     callback({
                         success: false,
-                        data: {
-                            error: data.error
-                        }
+                        error: data.error
                     });
                 }else{
                     callback({
@@ -169,17 +160,13 @@ module.exports = {
                             if(data2.error){
                                 callback({
                                     success: false,
-                                    data: { 
-                                        error: data2.error
-                                    }
+                                    error: data2.error
                                 });
                             }else if(data2.data.length==0){
                                 callback({
                                     success: false,
-                                    data: {
-                                        error: "No results"
-                                    }
-                                })
+                                    error: "No Results"
+                                });
                             }else{
                                 callback({
                                     success: true,
