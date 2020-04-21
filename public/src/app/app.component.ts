@@ -9,21 +9,13 @@ import { ActivatedRoute } from '@angular/router';
 })
 export class AppComponent {
 
-  private spotify_access_token = 'no';
-  private spotify_refresh_token = 'no';
-
-  constructor(private route: ActivatedRoute){
-
+  constructor(private route: ActivatedRoute ){
   }
 
   ngOnInit() {
-    this.route.queryParamMap.subscribe(params => {
-      this.spotify_access_token = params.get('spotify_access_token');
-      this.spotify_refresh_token = params.get('spotify_refresh_token');
-    });
   }
 
-  connectToDeezer(){
-    console.log("Not Yet Implemented")
-  };
+  create(playlistName: string) : void{
+    console.log(playlistName)
+  }
 }

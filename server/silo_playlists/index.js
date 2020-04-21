@@ -18,32 +18,6 @@ var credentials = {
 var scopes = ['user-read-private', 'user-read-email'];
 var spotifyApi = new SpotifyWebApi(credentials);
 
-var app = express();
-
-
-
-
-
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: true}));
-
-app.use(express.static(path.join(__dirname, 'public')));   
-
-
-app.use(function(req, res, next){
-    // Website you wish to allow to connect
-    res.setHeader('Access-Control-Allow-Origin', '*');
-
-    //Request methods you wish to allow
-    res.setHeader("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE");
-
-    //Request headers you wish to allow
-    res.setHeader("Access-Control-Allow-Headers", "X-requested-with,content-type");
-
-    next();
-});
-
-
 
 var mongoose = require("mongoose");
 var Schema = mongoose.Schema;
@@ -62,26 +36,23 @@ mongoose.connect('mongodb://localhost:27017/crossDSN', function (err) {
 });
 
 //declare schema USER
-var AccountSchema = Schema({
-    account_id : {type: String, unique: true},
+var PlaylistSchema = Schema({
+    playlist_id : {type: String, unique: true},
     display_name: String,
-    username: String,
-    picture_url : String,
-    email : String,
-    service : {type :String, enum : [Services.SPOTIFY, Services.DEEZER]},
-    spotify_service : {
-        refresh_token : String,
-        access_token :String,
-        expire_date : Date //spotify access tokens expires in 1 hour (3600 sec)
-    },
-    deezer_service : {
-        access_token : String,
-    }
+    spotify_playlist_id: String,
+    spotify_account_id: String,
+    deezer_playlist_id: String,
+    deezer_account_id: String,
+    songs : [{
+        isrc : String,
+        available_spotify: Boolean,
+        available_deezer: Boolean,
+    }]
 });
-AccountSchema.index({ email: 1, service: 1}, { unique: true });
+PlaylistSchema.index({ email: 1, service: 1}, { unique: true });
 
 //Init model
-var AccountModel = mongoose.model('accounts', AccountSchema);
+var PlaylistModel = mongoose.model('playlists', PlaylistSchema);
 
 function getExpirationDate(expires_in){
     return new Date((new Date()).getTime()+expires_in*1000);

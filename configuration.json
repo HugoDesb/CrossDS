@@ -1,0 +1,25 @@
+{
+    "public":{
+        "base_address": "http://localhost",
+        "port" : "4200"
+    },
+
+    "server" : {
+        "base_address": "http://localhost",
+        "port" : "8888"
+    },
+
+    "spotify":{
+        "clientID": "8f6c8d03f6804e17b0757a1645854d4f",
+        "clientSecret": "b1567c32522c434c8c25611c51ac9d8f",
+        "scopes": ["user-read-private", "user-read-email"]
+    },
+
+    "deezer":{
+        "app_id": "407522",
+        "secret": "d482da32d0e5f1360bfa87e3ebb810a8",
+        "perms" : "basic_access,email,offline_access"
+    }
+
+
+}

@@ -7,20 +7,23 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { TopBarComponent } from './top-bar/top-bar.component';
 import { SpotifyUserComponent } from './spotify-user/spotify-user.component';
+import { DeezerUserComponent } from './deezer-user/deezer-user.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     TopBarComponent,
-    SpotifyUserComponent
+    SpotifyUserComponent,
+    DeezerUserComponent,
   ],
   imports: [
     BrowserModule,
     AppRoutingModule,
     HttpClientModule,
     RouterModule.forRoot([
-      {path:'', component:AppComponent}
-    ])
+      {path:'', component:AppComponent},
+      //{path: '/callback/spotify/:access_token', component: CallbackSpotifyComponent },
+    ]),
   ],
   providers: [],
   bootstrap: [AppComponent]

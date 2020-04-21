@@ -7,28 +7,28 @@
  * For more information, read
  * https://developer.spotify.com/web-api/authorization-guide/#authorization_code_flow
  */
-const port = 8888;
-const serverAdress = "http://localhost"
 
-
+const Configuration = require('../configuration.json');
 var express = require('express'); // Express web server framework
 var request = require('request'); // "Request" library
 var cors = require('cors');
 var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
 var SpotifyWebApi = require('spotify-web-api-node');
-
 var accountLayer = require('./silo_accounts/index.js');
+var spotifyPilot = require('./pilote_spotify/index.js')
+const bodyParser = require("body-parser");
 
+const port = Configuration.server.port;
+const serverAdress = Configuration.server.base_address;
+const server = serverAdress+":"+port;
 
 var credentials = {
-  clientId: '8f6c8d03f6804e17b0757a1645854d4f',
-  clientSecret: 'b1567c32522c434c8c25611c51ac9d8f',
-  redirectUri: serverAdress+':'+port+'/api/spotify/login/callback/'
+  clientId: Configuration.spotify.clientID,
+  clientSecret: Configuration.spotify.clientSecret,
+  redirectUri: server+'/api/spotify/login/callback/'
 };
-
-var scopes = ['user-read-private', 'user-read-email'];
-
+var scopes = Configuration.spotify.scopes;
 var spotifyApi = new SpotifyWebApi(credentials);
 
 
@@ -58,6 +58,10 @@ var app = express();
 
 app.use(express.static(__dirname + '../crossDSN/'))
    .use(cors())
+   .use(bodyParser.urlencoded({
+    extended: true
+   }))
+   .use(bodyParser.json())
    .use(cookieParser());
 
 app.use(function(req, res, next){
@@ -79,10 +83,8 @@ app.use(function(req, res, next){
  * Redirect to /callback/spotify
  */
 app.get('/api/spotify/login', function(req, res) {
-  var state = generateRandomString(16);
   res.cookie(stateKey, state);
-  var authorizeURL = spotifyApi.createAuthorizeURL(scopes, state);
-  res.send({success: true, data: authorizeURL});
+  res.send({success: true, data: spotifyPilot.getOAuthURL()});
 });
 
 /**
@@ -92,18 +94,13 @@ app.get('/api/spotify/login', function(req, res) {
  */
 app.get('/api/deezer/login', function(req, res) {
   var authorizeURL = "https://connect.deezer.com/oauth/auth.php?"+querystring.stringify({
-    app_id : 	407522,
-    redirect_uri : "http://localhost:8888/api/deezer/login/callback",
-    perms : "basic_access,email,offline_access"
+    app_id : 	Configuration.deezer.app_id,
+    redirect_uri : server+"/api/deezer/login/callback",
+    perms : Configuration.deezer.perms
   });
   res.send({success: true, data: authorizeURL});
   //res.redirect(authorizeURL);
 });
-
-app.get('/api/spotify/user/info', function(req, res){
-
-});
-
 
 /**
  * GET 
@@ -120,13 +117,15 @@ app.get('/api/spotify/login/callback', function(req, res) {
   var state = req.query.state || null;
   var storedState = req.cookies ? req.cookies[stateKey] : null;
 
+  var redirectUrl = Configuration.public.base_address+":"+Configuration.public.port+"/callback/spotify?";
+
   if (state === null || state !== storedState) {
       res.send({
           error:'state_mismatch'
       });
 
   }else if (req.query.error){
-    res.redirect('http://localhost:4200/?' +
+    res.redirect(redirectUrl +
       querystring.stringify({
         spotify_error: "Can't connect to Spotify :/"
       }));
@@ -140,8 +139,11 @@ app.get('/api/spotify/login/callback', function(req, res) {
         spotifyApi.setAccessToken(data.body['access_token']);
         spotifyApi.setRefreshToken(data.body['refresh_token']);
 
+        //Après l'autorisation, on ajoute l'utilisateur dans la base
+        // Récupération infos
         spotifyApi.getMe().then(
           function(me){
+            //Ajout ds la base
             accountLayer.createSpotifyAccount(
                 data.body.refresh_token, 
                 data.body.access_token, 
@@ -151,10 +153,12 @@ app.get('/api/spotify/login/callback', function(req, res) {
                 me.body.images[0].url,
                 me.body.email, 
                 function(ret){
-                  res.redirect('http://localhost:4200/spotify/callback?' + 
+                  //Callback vers le front avec l'access_token
+                  res.cookie("spotify_access_token", ret.access_token);
+                  res.redirect(Configuration.public.base_address+":"+Configuration.public.port/*+"/spotify/callback/?" + 
                     querystring.stringify({
-                      access_token : ret.data.spotify_service.access_token
-                    })
+                      spotify_access_token : ret.access_token
+                    })*/
                   );
             });
           }
@@ -170,7 +174,6 @@ app.get('/api/spotify/login/callback', function(req, res) {
 
 
 app.get('/api/deezer/login/callback', function(req, res) {
-  // http://redirect_uri?error_reason=user_denied
   if(req.query.error_reason=="user_denied"){
     res.redirect("http://localhost:4200/spotify/callback?"+querystring.stringify({
       deezer_error: "Can't connect to Deezer :/"
@@ -179,8 +182,8 @@ app.get('/api/deezer/login/callback', function(req, res) {
     var code = req.query.code;
 
     var accessTokenURL = 'https://connect.deezer.com/oauth/access_token.php?'+querystring.stringify({
-      app_id : 407522,
-      secret : 	"d482da32d0e5f1360bfa87e3ebb810a8", 
+      app_id : Configuration.deezer.app_id,
+      secret : 	Configuration.deezer.secret, 
       code: code,
       output: "json"
     });
@@ -194,27 +197,12 @@ app.get('/api/deezer/login/callback', function(req, res) {
             if(err2){
               console.log(err2);
             }else{
-              accountLayer.createOrGetDeezerAccount(res1.body.access_token, res2.body.name, res2.body.id, res2.body.picture_medium, res2.body.email , function(ret){
-                var hop = {
-                  service : ret.data.service,
-                  email : ret.data.email,
-                  picture_url : ret.data.picture_url,
-                  username: ret.data.username,
-                  display_name: ret.data.display_name,
-                  account_id : ret.data.account_id,
-                  access_token : ret.data.deezer_service.access_token
-                }
-                console.log(hop);
-                res.redirect('http://localhost:4200/deezer/callback?' + 
+              accountLayer.createDeezerAccount(res1.body.access_token, res2.body.name, res2.body.id, res2.body.picture_medium, res2.body.email , function(ret){
+                res.cookie("deezer_access_token", ret.access_token);
+                res.redirect(Configuration.public.base_address+":"+Configuration.public.port/*+"?" + 
                     querystring.stringify({
-                      service : ret.data.service,
-                      email : ret.data.email,
-                      picture_url : ret.data.picture_url,
-                      username: ret.data.username,
-                      display_name: ret.data.display_name,
-                      account_id : ret.data.account_id,
-                      access_token : ret.data.deezer_service.access_token
-                    })
+                      deezer_access_token : ret.access_token
+                    })*/
                   );
               });
             }
@@ -225,21 +213,44 @@ app.get('/api/deezer/login/callback', function(req, res) {
   }
 });
 
-/** 
- * GET 
- * Refresh the access token for the spotify user
- * Given the refresh token
- */
-app.get('/spotify/refresh_token', function(req, res) {
-  // requesting access token from refresh token
-  var refresh_token = req.query.refresh_token;
-  spotifyApi.setRefreshToken(refresh_token);
-  spotifyApi.refreshAccessToken().then(
-    function(access_token){
-      console.log("'/spotify/refresh_token' : "+access_token);
+
+app.post('/api/user/info', function(req, res){
+  console.log(req.body)
+  if(req.body.access_token == null || req.body.service == null){
+    res.send({
+      success : false, 
+      err: "The access_token or the service is missing"
+    });
+  }else{
+    console.log("HOP")
+    if(req.body.service == accountLayer.Services.SPOTIFY){
+      console.log("HOP2")
+      accountLayer.getSpotifyAccountInfo(req.body.access_token, function(ret){
+        console.log("Retour OK");
+        res.send(ret);
+      });
+    }else if(req.body.service == accountLayer.Services.DEEZER){
+      accountLayer.getDeezerAccountInfo(req.body.access_token, function(ret){
+        res.send(ret);
+      });
+    }else{
+      res.send({
+        success: false, 
+        data: "The service provided isn't supported"
+      })
     }
-  );
+  }
 });
+
+/**
+ * Create the playlist
+ */
+app.post('/api/playlist/:name', function(req, ret){
+  
+});
+
+
+
 
 console.log('Listening on '+port);
 app.listen(port);

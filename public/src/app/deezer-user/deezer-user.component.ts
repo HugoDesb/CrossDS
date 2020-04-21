@@ -1,35 +1,38 @@
 import { Component, OnInit, Inject } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
-import { SpotifyService } from 'src/services/spotify-service/spotify.service';
+import { DeezerService } from 'src/services/deezer-service/deezer.service';
+
 
 @Component({
-  selector: 'app-spotify-user',
-  templateUrl: './spotify-user.component.html',
-  styleUrls: ['./spotify-user.component.css']
+  selector: 'app-deezer-user',
+  templateUrl: './deezer-user.component.html',
+  styleUrls: ['./deezer-user.component.css']
 })
-export class SpotifyUserComponent implements OnInit {
+export class DeezerUserComponent implements OnInit {
 
   connected= false;
 
   account;
 
-  constructor(@Inject(DOCUMENT) private document: Document, private spotifyService:SpotifyService){}
+  constructor(@Inject(DOCUMENT) private document: Document, private deezerService:DeezerService) {
+
+  }
 
   ngOnInit(): void {
-    if (this.getCookie("spotify_access_token") != "") {
+    if (this.getCookie("deezer_access_token") != "") {
       console.log('The cookie "reader" exists (ES6)')
       //get Infos
-      this.spotifyService.getUserInfos(this.getCookie("spotify_access_token"))
+      this.deezerService.getUserInfos(this.getCookie("deezer_access_token"))
         .subscribe(ret => {
           this.account= ret.data;
           this.connected = true;
       })
     }
-  };
+  }
 
   connect(): void{
-    console.log(this.spotifyService)
-    this.spotifyService.connect();
+    console.log(this.deezerService)
+    this.deezerService.connect();
   };
 
   getCookie(cname : string): string{
@@ -47,6 +50,4 @@ export class SpotifyUserComponent implements OnInit {
     }
     return "";
   };
-
-  
 }
